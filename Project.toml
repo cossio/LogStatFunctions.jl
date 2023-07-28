@@ -1,0 +1,7 @@
+name = "LogStatFunctions"
+uuid = "1b3c2205-da69-4893-b2df-717075b12251"
+authors = ["JFdCD <j.cossio.diaz@gmail.com>"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1.9"
