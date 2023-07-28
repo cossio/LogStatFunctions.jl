@@ -3,5 +3,9 @@ uuid = "1b3c2205-da69-4893-b2df-717075b12251"
 authors = ["JFdCD <j.cossio.diaz@gmail.com>"]
 version = "1.0.0-DEV"
 
+[deps]
+LogExpFunctions = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
+
 [compat]
 julia = "1.9"
+LogExpFunctions = "0.3"
