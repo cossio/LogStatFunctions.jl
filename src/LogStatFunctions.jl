@@ -5,18 +5,18 @@ export logmeanexp, logvarexp, logstdexp
 using LogExpFunctions: logsumexp, logsubexp
 
 """
-    logmeanexp(A; dims=:)
+    logmeanexp(A::AbstractArray; dims=:)
 
 Computes `log.(mean(exp.(A); dims))`, in a numerically stable way.
 """
 function logmeanexp(A::AbstractArray; dims=:)
     R = logsumexp(A; dims)
-    N = length(A) ÷ length(R)
+    N = convert(eltype(R), length(A) ÷ length(R))
     return R .- log(N)
 end
 
 """
-    logvarexp(A; dims=:)
+    logvarexp(A::AbstractArray; dims=:)
 
 Computes `log.(var(exp.(A); dims))`, in a numerically stable way.
 """
@@ -24,7 +24,7 @@ function logvarexp(
     A::AbstractArray; dims=:, corrected::Bool=true, logmean=logmeanexp(A; dims)
 )
     R = logsumexp(2logsubexp.(A, logmean); dims)
-    N = length(A) ÷ length(R)
+    N = convert(eltype(R), length(A) ÷ length(R))
 	if corrected
 		return R .- log(N - 1)
     else
@@ -33,7 +33,7 @@ function logvarexp(
 end
 
 """
-    logstdexp(A; dims=:)
+    logstdexp(A::AbstractArray; dims=:)
 
 Computes `log.(std(exp.(A); dims))`, in a numerically stable way.
 """

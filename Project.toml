@@ -1,11 +1,11 @@
 name = "LogStatFunctions"
 uuid = "1b3c2205-da69-4893-b2df-717075b12251"
 authors = ["JFdCD <j.cossio.diaz@gmail.com>"]
-version = "2.0.0"
+version = "2.1.0"
 
 [deps]
 LogExpFunctions = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
 
 [compat]
-julia = "1.8"
 LogExpFunctions = "0.3"
+julia = "1.8"
