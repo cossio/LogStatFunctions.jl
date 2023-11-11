@@ -1,5 +1,7 @@
 module LogStatFunctions
 
+export logmeanexp, logvarexp, logstdexp
+
 using LogExpFunctions: logsumexp, logsubexp
 
 """
