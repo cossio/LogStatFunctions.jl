@@ -1,7 +1,7 @@
 module LogStatFunctionsChainRulesCoreExt
 
 using LogStatFunctions: logmeanexp, logvarexp, logstdexp
-using LogExpFunctions: logsumexp
+using LogExpFunctions: log1mexp, logsumexp
 import ChainRulesCore
 
 function ChainRulesCore.frule((_, Δx), ::typeof(logmeanexp), x::AbstractArray{<:Real}; dims = :)
@@ -69,20 +69,28 @@ end
 # in t and never enters the arithmetic), and in the log domain (squaring expm1(d) directly
 # can underflow even when the gradient itself is representable, e.g. for nearly equal
 # entries). The centered log-mean uses log1p(mean(expm1(t))), which retains offsets below
-# the epsilon of logsumexp(t) - log(n) (e.g. lm = -1e-200 for x = [-1e-200, 1e-200]).
+# the epsilon of logsumexp(t) - log(n) (e.g. lm = -1e-200 for x = [-1e-200, 1e-200]); the
+# expm1 terms are accumulated in at least Float64, since in half precision individually
+# tiny terms round to -1 and their collective contribution to the mean is lost.
 function _∂x_logvarexp(x::AbstractArray{<:Real}, dims)
     t = x .- maximum(x; dims)
-    s = sum(expm1.(t); dims)
+    s = sum(_wexpm1, t; dims)
     n = length(x) ÷ length(s)
+    T = float(eltype(t))
     # mean(exp.(t)) ≥ 1/n since the max entry contributes exp(0) = 1, so lm ≥ -log(n); the
-    # floor also catches low-precision sums rounding s to exactly -n (log1p(-1) == -Inf),
-    # which happens precisely when the max dominates and -log(n) is the correct value.
-    lm = max.(log1p.(s ./ n), -log(convert(eltype(s), n)))
+    # floor catches sums rounding s to exactly -n (log1p(-1) == -Inf), which can only
+    # happen when the max dominates and -log(n) is the correct value.
+    lm = max.(T.(log1p.(s ./ n)), -log(convert(T, n)))
     d = t .- lm
-    l = log.(abs.(expm1.(d)))
+    # log(abs(expm1(d))) without materializing expm1(d), which can overflow in half
+    # precision even though d ≤ log(n) keeps the final gradient representable.
+    l = max.(d, 0) .+ log1mexp.(-abs.(d))
     S = logsumexp(2 .* l; dims)
     return sign.(d) .* 2 .* exp.(d .+ l .- S)
 end
+
+# expm1 with the accumulation widened to at least Float64 (BigFloat stays BigFloat)
+_wexpm1(u::Real) = expm1(convert(promote_type(Float64, typeof(u)), u))
 
 function _∂x_pullback(∂x, x)
     project_x = ChainRulesCore.ProjectTo(x)

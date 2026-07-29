@@ -37,17 +37,27 @@ end
     # In Float16 the sum of 4095 expm1(-20) ≈ -1 terms rounds to -4096 == -n, which used to
     # drive the centered log-mean to -Inf and the gradients to NaN. The max entry dominates,
     # so its logvarexp gradient is ≈ 2 (and half that for logstdexp).
-    x = Float16[0; fill(Float16(-20), 4095)]
-    for (f, h) in ((logvarexp, 1), (logstdexp, 2))
-        Ω, pb = rrule(f, x)
-        @test isfinite(Ω)
-        x̄ = unthunk(pb(one(Float16))[2])
-        @test all(isfinite, x̄)
-        @test x̄[1] ≈ 2 / h rtol = 0.05
-        Ω, ΔΩ = frule((NoTangent(), [1; zeros(4095)]), f, x)
-        @test isfinite(Ω)
-        @test ΔΩ ≈ 2 / h rtol = 0.05
+    for m in (4095, 65503)
+        x = Float16[0; fill(Float16(-20), m)]
+        for (f, h) in ((logvarexp, 1), (logstdexp, 2))
+            Ω, pb = rrule(f, x)
+            @test isfinite(Ω)
+            x̄ = unthunk(pb(one(Float16))[2])
+            @test all(isfinite, x̄)
+            @test x̄[1] ≈ 2 / h rtol = 0.05
+            Ω, ΔΩ = frule((NoTangent(), [1; zeros(m)]), f, x)
+            @test isfinite(Ω)
+            @test ΔΩ ≈ 2 / h rtol = 0.05
+        end
     end
+    # Individually tiny but collectively significant tail: expm1(-8.5) rounds to -1 in
+    # Float16, yet the 4095 tail entries contribute most of the mean. The tail gradients
+    # are ≈ -1e-7 (subnormal in Float16, hence the loose tolerance).
+    x = Float16[0; fill(Float16(-8.5), 4095)]
+    x̄ = unthunk(rrule(logvarexp, x)[2](one(Float16))[2])
+    @test all(isfinite, x̄)
+    @test x̄[1] ≈ 2 rtol = 0.05
+    @test x̄[2] ≈ -9.9e-8 rtol = 0.5
 end
 
 @testset "chainrules large common offset" begin
