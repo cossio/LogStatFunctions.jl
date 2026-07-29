@@ -7,6 +7,11 @@ All notable changes to this project will be documented in this file. The format 
 - Add in-place variants `logmeanexp!`, `logvarexp!` and `logstdexp!`, which
   write the result into a preallocated output array, reducing over its
   singleton dimensions.
+
+## v2.2.0
+
+- First version registered in the [General registry](https://github.com/JuliaRegistries/General)
+  (earlier versions were registered at https://github.com/cossio/CossioJuliaRegistry).
 - Add a ChainRulesCore extension defining `frule`s and `rrule`s for
   `logmeanexp`, `logvarexp` and `logstdexp` on real arrays, making them
   differentiable with ChainRules-based AD packages (e.g. Zygote).

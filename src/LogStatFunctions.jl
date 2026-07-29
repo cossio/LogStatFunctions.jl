@@ -53,7 +53,7 @@ singleton dimensions of `out`, and writes the result to `out`.
 function logmeanexp!(out::AbstractArray, A::AbstractArray)
     logsumexp!(out, A)
     N = length(A) ÷ length(out)
-    out .-= loglen(out, N)
+    out .-= log(N)
     return out
 end
 
@@ -70,9 +70,9 @@ function logvarexp!(
     logsumexp!(out, 2logsubexp.(A, logmean))
     N = length(A) ÷ length(out)
     if corrected
-        out .-= loglen(out, N - 1)
+        out .-= log(N - 1)
     else
-        out .-= loglen(out, N)
+        out .-= log(N)
     end
     return out
 end
