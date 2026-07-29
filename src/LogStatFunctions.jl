@@ -43,9 +43,6 @@ function logstdexp(
     return halve!(logvarexp(A; dims, corrected, logmean))
 end
 
-# `log` of the reduction factor, evaluated in the precision of the result: taking
-# `log` of the `Int` first would normalize e.g. a BigFloat result by a Float64
-# approximation and silently discard the extra precision.
 loglen(R::AbstractArray, N::Integer) = log(convert(real(eltype(R)), N))
 loglen(R::Number, N::Integer) = log(convert(real(typeof(R)), N))
 
