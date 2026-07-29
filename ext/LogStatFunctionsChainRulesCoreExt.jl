@@ -60,17 +60,21 @@ end
 
 # ∂/∂xⱼ log(var(exp.(x))) = 2 exp(xⱼ) (exp(xⱼ) - m) / Σᵢ (exp(xᵢ) - m)², with m = exp(logmean).
 # The m-dependence on x drops out because Σᵢ (exp(xᵢ) - m) = 0, and `corrected` only shifts
-# the result by a constant, so the gradient is the same either way. The gradient is
-# translation-invariant, so everything is computed from max-centered values (a large common
-# offset cancels exactly in t and never enters the arithmetic), and in the log domain
-# (squaring expm1(d) directly can underflow even when the gradient itself is representable,
-# e.g. for nearly equal entries). lm is formed before subtracting from t so that log(n)
-# cancels against logsumexp's log(n) content instead of absorbing tiny d values.
+# the result by a constant, so the gradient is the same either way. The `logmean` keyword is
+# a cache of logmeanexp(x; dims), and the rules differentiate under that assumption (a
+# ChainRules pullback cannot attribute tangents to keyword arguments, so treating logmean as
+# an independent constant would silently drop the mean's own x-dependence); it is therefore
+# recomputed here rather than taken from the caller. The gradient is translation-invariant,
+# so everything is computed from max-centered values (a large common offset cancels exactly
+# in t and never enters the arithmetic), and in the log domain (squaring expm1(d) directly
+# can underflow even when the gradient itself is representable, e.g. for nearly equal
+# entries). The centered log-mean uses log1p(mean(expm1(t))), which retains offsets below
+# the epsilon of logsumexp(t) - log(n) (e.g. lm = -1e-200 for x = [-1e-200, 1e-200]).
 function _∂x_logvarexp(x::AbstractArray{<:Real}, dims)
     t = x .- maximum(x; dims)
-    lse = logsumexp(t; dims)
-    n = length(x) ÷ length(lse)
-    lm = lse .- log(convert(eltype(lse), n))
+    s = sum(expm1.(t); dims)
+    n = length(x) ÷ length(s)
+    lm = log1p.(s ./ n)
     d = t .- lm
     l = log.(abs.(expm1.(d)))
     S = logsumexp(2 .* l; dims)

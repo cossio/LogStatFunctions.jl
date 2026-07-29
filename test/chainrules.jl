@@ -25,11 +25,11 @@ end
         Ω, pb = rrule(f, x)
         @test isfinite(Ω)
         x̄ = unthunk(pb(1.0)[2])
-        @test all(isfinite, x̄)
-        @test x̄[1] ≈ -1.0e200 / h
+        @test collect(x̄) ≈ [-1.0e200, 1.0e200] ./ h
         Ω, ΔΩ = frule((NoTangent(), [1.0, 0.0]), f, x)
         @test isfinite(Ω)
         @test ΔΩ ≈ -1.0e200 / h
+        @test frule((NoTangent(), [0.0, 1.0]), f, x)[2] ≈ 1.0e200 / h
     end
 end
 
