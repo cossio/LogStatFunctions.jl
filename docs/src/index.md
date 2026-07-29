@@ -28,6 +28,16 @@ logstdexp(A; corrected=false)
 `logvarexp` and `logstdexp` also accept `logmean` to reuse a precomputed
 `logmeanexp(A; dims)`.
 
+Each function has an in-place variant (`logmeanexp!`, `logvarexp!`,
+`logstdexp!`) that writes the result into a preallocated output array,
+reducing over the singleton dimensions of `out`:
+
+```julia
+A = randn(10, 5)
+out = zeros(1, 5)
+logmeanexp!(out, A)          # same as logmeanexp(A; dims=1)
+```
+
 All three functions have
 [ChainRules](https://github.com/JuliaDiff/ChainRulesCore.jl) derivative rules
 for real arrays (loaded automatically when ChainRulesCore is in the
@@ -40,4 +50,7 @@ such as Zygote. Complex arrays are not covered by these rules.
 logmeanexp
 logvarexp
 logstdexp
+logmeanexp!
+logvarexp!
+logstdexp!
 ```

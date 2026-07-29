@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+- Add in-place variants `logmeanexp!`, `logvarexp!` and `logstdexp!`, which
+  write the result into a preallocated output array, reducing over its
+  singleton dimensions.
+
 ## v2.2.0
 
 - First version registered in the [General registry](https://github.com/JuliaRegistries/General)
