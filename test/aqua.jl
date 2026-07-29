@@ -3,5 +3,5 @@ import LogStatFunctions
 using Test: @testset
 
 @testset "aqua" begin
-    Aqua.test_all(LogStatFunctions; ambiguities = false)
+    Aqua.test_all(LogStatFunctions)
 end
