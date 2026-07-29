@@ -27,6 +27,3 @@ logstdexp(A; corrected=false)
 
 `logvarexp` and `logstdexp` also accept `logmean` to reuse a precomputed
 `logmeanexp(A; dims)`.
-
-See also [LogStatExpFunctions.jl](https://github.com/cossio/LogStatExpFunctions.jl),
-which provides the same functions.
