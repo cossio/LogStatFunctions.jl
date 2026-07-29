@@ -74,7 +74,10 @@ function _∂x_logvarexp(x::AbstractArray{<:Real}, dims)
     t = x .- maximum(x; dims)
     s = sum(expm1.(t); dims)
     n = length(x) ÷ length(s)
-    lm = log1p.(s ./ n)
+    # mean(exp.(t)) ≥ 1/n since the max entry contributes exp(0) = 1, so lm ≥ -log(n); the
+    # floor also catches low-precision sums rounding s to exactly -n (log1p(-1) == -Inf),
+    # which happens precisely when the max dominates and -log(n) is the correct value.
+    lm = max.(log1p.(s ./ n), -log(convert(eltype(s), n)))
     d = t .- lm
     l = log.(abs.(expm1.(d)))
     S = logsumexp(2 .* l; dims)

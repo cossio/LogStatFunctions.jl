@@ -33,6 +33,23 @@ end
     end
 end
 
+@testset "chainrules low-precision large reduction" begin
+    # In Float16 the sum of 4095 expm1(-20) ≈ -1 terms rounds to -4096 == -n, which used to
+    # drive the centered log-mean to -Inf and the gradients to NaN. The max entry dominates,
+    # so its logvarexp gradient is ≈ 2 (and half that for logstdexp).
+    x = Float16[0; fill(Float16(-20), 4095)]
+    for (f, h) in ((logvarexp, 1), (logstdexp, 2))
+        Ω, pb = rrule(f, x)
+        @test isfinite(Ω)
+        x̄ = unthunk(pb(one(Float16))[2])
+        @test all(isfinite, x̄)
+        @test x̄[1] ≈ 2 / h rtol = 0.05
+        Ω, ΔΩ = frule((NoTangent(), [1; zeros(4095)]), f, x)
+        @test isfinite(Ω)
+        @test ΔΩ ≈ 2 / h rtol = 0.05
+    end
+end
+
 @testset "chainrules large common offset" begin
     # The gradients are translation-invariant. The spread is a multiple of ulp(c) for every
     # offset c below, so x .+ c is exact and the gradients must agree to machine precision.
