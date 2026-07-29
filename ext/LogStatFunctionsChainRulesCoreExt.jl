@@ -76,12 +76,13 @@ function _∂x_logvarexp(x::AbstractArray{<:Real}, dims)
     t = x .- maximum(x; dims)
     s = sum(_wexpm1, t; dims)
     n = length(x) ÷ length(s)
-    T = float(eltype(t))
     # mean(exp.(t)) ≥ 1/n since the max entry contributes exp(0) = 1, so lm ≥ -log(n); the
     # floor catches sums rounding s to exactly -n (log1p(-1) == -Inf), which can only
     # happen when the max dominates and -log(n) is the correct value.
-    lm = max.(T.(log1p.(s ./ n)), -log(convert(T, n)))
-    d = t .- lm
+    lm = max.(log1p.(s ./ n), -log(n))
+    # narrow back to the input's precision elementwise (via values, not eltype, so arrays
+    # with abstract element types still work)
+    d = oftype.(float.(t), t .- lm)
     # log(abs(expm1(d))) without materializing expm1(d), which can overflow in half
     # precision even though d ≤ log(n) keeps the final gradient representable.
     l = max.(d, 0) .+ log1mexp.(-abs.(d))

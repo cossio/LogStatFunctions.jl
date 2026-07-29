@@ -60,6 +60,15 @@ end
     @test x̄[2] ≈ -9.9e-8 rtol = 0.5
 end
 
+@testset "chainrules abstract eltype" begin
+    x = Real[0.0, 1.0]
+    for f in (logmeanexp, logvarexp, logstdexp)
+        @test unthunk(rrule(f, x)[2](1.0)[2]) ≈ unthunk(rrule(f, [0.0, 1.0])[2](1.0)[2])
+        @test frule((NoTangent(), [1.0, 0.0]), f, x)[2] ≈
+            frule((NoTangent(), [1.0, 0.0]), f, [0.0, 1.0])[2]
+    end
+end
+
 @testset "chainrules large common offset" begin
     # The gradients are translation-invariant. The spread is a multiple of ulp(c) for every
     # offset c below, so x .+ c is exact and the gradients must agree to machine precision.
