@@ -80,14 +80,16 @@ function _∂x_logvarexp(x::AbstractArray{<:Real}, dims)
     # floor catches sums rounding s to exactly -n (log1p(-1) == -Inf), which can only
     # happen when the max dominates and -log(n) is the correct value.
     lm = max.(log1p.(s ./ n), -log(n))
-    # narrow back to the input's precision elementwise (via values, not eltype, so arrays
-    # with abstract element types still work)
-    d = oftype.(float.(t), t .- lm)
+    # d stays widened: narrowing here can round centered offsets below the input type's
+    # resolution to zero even when the final gradient is representable
+    d = t .- lm
     # log(abs(expm1(d))) without materializing expm1(d), which can overflow in half
     # precision even though d ≤ log(n) keeps the final gradient representable.
     l = max.(d, 0) .+ log1mexp.(-abs.(d))
     S = logsumexp(2 .* l; dims)
-    return sign.(d) .* 2 .* exp.(d .+ l .- S)
+    # narrow only the final result back to the input's precision, elementwise via values
+    # rather than eltype so arrays with abstract element types still work
+    return oftype.(float.(t), sign.(d) .* 2 .* exp.(d .+ l .- S))
 end
 
 # expm1 with the accumulation widened to at least Float64 (BigFloat stays BigFloat)

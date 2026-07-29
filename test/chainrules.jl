@@ -58,6 +58,16 @@ end
     @test all(isfinite, x̄)
     @test x̄[1] ≈ 2 rtol = 0.05
     @test x̄[2] ≈ -9.9e-8 rtol = 0.5
+    # Nearly adjacent subnormals: the centered offsets (±2^-25) sit below the Float16
+    # subnormal spacing, but the gradients (±2^14, and half that for logstdexp) are
+    # exactly representable.
+    x = Float16[zeros(2048); fill(nextfloat(Float16(0)), 2048)]
+    for (f, h) in ((logvarexp, 1), (logstdexp, 2))
+        x̄ = unthunk(rrule(f, x)[2](one(Float16))[2])
+        @test all(isfinite, x̄)
+        @test x̄[1] ≈ -16384 / h rtol = 0.05
+        @test x̄[end] ≈ 16384 / h rtol = 0.05
+    end
 end
 
 @testset "chainrules abstract eltype" begin
