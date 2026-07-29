@@ -79,6 +79,7 @@ end
     # log of the Int first would normalize by a Float64 approximation
     @test logmeanexp(fill(big"0.0", 3)) == 0
     @test logmeanexp(fill(big"0.0", 3, 2); dims = 1) == zeros(BigFloat, 1, 2)
+    @test logmeanexp!(fill(big"NaN", 1, 2), fill(big"0.0", 3, 2)) == zeros(BigFloat, 1, 2)
     A = big"0.0" .+ [0.0, 1.0, 2.0, 3.0]
     @test logmeanexp(A) isa BigFloat
     @test logmeanexp(A) ≈ log(mean(exp.(A)))
