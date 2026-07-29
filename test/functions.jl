@@ -2,6 +2,7 @@ using Test: @test, @testset, @inferred
 using Statistics: mean, var, std
 using StaticArrays: SA
 using LogStatFunctions: logmeanexp, logvarexp, logstdexp
+using LogStatFunctions: logmeanexp!, logvarexp!, logstdexp!
 
 @testset "logmeanexp, logvarexp, logstdexp" begin
     A = randn(11, 7, 5)
@@ -17,6 +18,35 @@ using LogStatFunctions: logmeanexp, logvarexp, logstdexp
     @test logmeanexp(A) ≈ log.(mean(exp.(A)))
     @test logvarexp(A) ≈ log.(var(exp.(A)))
     @test logstdexp(A) ≈ log.(std(exp.(A)))
+end
+
+@testset "logmeanexp!, logvarexp!, logstdexp!" begin
+    A = randn(11, 7, 5)
+    for dims in (1, 2, 3, (1, 2), (2, 3), (1, 3), (1, 2, 3))
+        out = similar(logmeanexp(A; dims))
+        @test logmeanexp!(out, A) === out
+        @test out ≈ log.(mean(exp.(A); dims))
+        for corrected in (true, false)
+            out = similar(logvarexp(A; dims))
+            @test logvarexp!(out, A; corrected) === out
+            @test out ≈ log.(var(exp.(A); dims, corrected))
+            out = similar(logstdexp(A; dims))
+            @test logstdexp!(out, A; corrected) === out
+            @test out ≈ log.(std(exp.(A); dims, corrected))
+        end
+    end
+    # reuse a precomputed logmean
+    for dims in (1, (1, 2))
+        logmean = logmeanexp(A; dims)
+        out = similar(logmean)
+        @test logvarexp!(out, A; logmean) ≈ logvarexp(A; dims)
+        @test logstdexp!(out, A; logmean) ≈ logstdexp(A; dims)
+    end
+    # eltype of `out` determines the result eltype
+    B = randn(Float32, 11, 7)
+    out = zeros(Float32, 1, 7)
+    @test eltype(logmeanexp!(out, B)) === Float32
+    @test logmeanexp!(out, B) ≈ logmeanexp(B; dims = 1)
 end
 
 @testset "no overflow" begin

@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file. The format 
 
 ## Unreleased
 
+- Add in-place variants `logmeanexp!`, `logvarexp!` and `logstdexp!`, which
+  write the result into a preallocated output array, reducing over its
+  singleton dimensions.
 - Add a ChainRulesCore extension defining `frule`s and `rrule`s for
   `logmeanexp`, `logvarexp` and `logstdexp` on real arrays, making them
   differentiable with ChainRules-based AD packages (e.g. Zygote).
