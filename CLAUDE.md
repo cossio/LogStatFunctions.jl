@@ -45,7 +45,7 @@ julia --project=<env-with-Runic> -m Runic --check --diff .   # drop --check to a
 
 ## CI
 
-Four workflows in `.github/workflows/`: `ci.yml` (tests on Julia 1.10 and latest stable, uploads coverage to Codecov — thresholds in `codecov.yml` — plus a `downgrade` job that tests the oldest supported Julia against the compat lower bounds of the deps), `format.yml` (Runic check), `docs.yml` (Documenter build + deploy to GitHub Pages), `TagBot.yml` (tags and GitHub releases after registry merges).
+Four workflows in `.github/workflows/`: `ci.yml` (tests on latest stable Julia, uploads coverage to Codecov — thresholds in `codecov.yml` — plus a `downgrade` job that tests the oldest supported Julia against the compat lower bounds of the deps), `format.yml` (Runic check), `docs.yml` (Documenter build + deploy to GitHub Pages), `TagBot.yml` (tags and GitHub releases after registry merges).
 
 ## Conventions and constraints
 
