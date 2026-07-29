@@ -1,5 +1,6 @@
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
 ExplicitImports = "7d51a73a-1435-4ff3-83d9-f097790105c7"
 LogStatFunctions = "1b3c2205-da69-4893-b2df-717075b12251"
@@ -9,6 +10,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 Aqua = "0.8"
+ChainRulesCore = "1"
 ChainRulesTestUtils = "1"
 ExplicitImports = "1.15"
 StaticArrays = "1"

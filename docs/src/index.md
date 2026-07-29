@@ -30,8 +30,9 @@ logstdexp(A; corrected=false)
 
 All three functions have
 [ChainRules](https://github.com/JuliaDiff/ChainRulesCore.jl) derivative rules
-(loaded automatically when ChainRulesCore is in the environment), so they can be
-differentiated with ChainRules-based AD packages such as Zygote.
+for real arrays (loaded automatically when ChainRulesCore is in the
+environment), so they can be differentiated with ChainRules-based AD packages
+such as Zygote. Complex arrays are not covered by these rules.
 
 ## Reference
 

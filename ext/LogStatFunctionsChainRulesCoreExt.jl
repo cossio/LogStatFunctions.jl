@@ -1,19 +1,18 @@
 module LogStatFunctionsChainRulesCoreExt
 
 using LogStatFunctions: logmeanexp, logvarexp, logstdexp
+using LogExpFunctions: logsumexp, softmax
 import ChainRulesCore
 
 function ChainRulesCore.frule((_, Δx), ::typeof(logmeanexp), x::AbstractArray{<:Real}; dims = :)
     Ω = logmeanexp(x; dims)
-    n = length(x) ÷ length(Ω)
-    ΔΩ = sum(exp.(x .- Ω) .* Δx; dims) ./ n
+    ΔΩ = sum(softmax(x; dims) .* Δx; dims)
     return Ω, ΔΩ
 end
 
 function ChainRulesCore.rrule(::typeof(logmeanexp), x::AbstractArray{<:Real}; dims = :)
     Ω = logmeanexp(x; dims)
-    n = length(x) ÷ length(Ω)
-    return Ω, _∂x_pullback(exp.(x .- Ω) ./ n, x)
+    return Ω, _∂x_pullback(softmax(x; dims), x)
 end
 
 function ChainRulesCore.frule(
@@ -50,21 +49,23 @@ function ChainRulesCore.rrule(
     return Ω, _∂x_pullback(_∂x_logvarexp(x, logmean, dims) / 2, x)
 end
 
-# ∂/∂xⱼ log(var(exp.(x))) = 2 exp(xⱼ) (exp(xⱼ) - m) / Σᵢ (exp(xᵢ) - m)², with m = exp(logmean).
-# The m-dependence on x drops out because Σᵢ (exp(xᵢ) - m) = 0, and `corrected` only shifts
-# the result by a constant, so the gradient is the same either way.
+# ∂/∂xⱼ log(var(exp.(x))) = 2 exp(xⱼ) (exp(xⱼ) - m) / Σᵢ (exp(xᵢ) - m)², with m = exp(logmean);
+# the dependence of m on x drops out since Σᵢ (exp(xᵢ) - m) = 0, and `corrected` only shifts
+# the result by a constant. Log-domain to avoid under/overflow of the squared terms.
 function _∂x_logvarexp(x::AbstractArray{<:Real}, logmean, dims)
     d = x .- logmean
-    e = expm1.(d)
-    return (2 .* exp.(d) .* e) ./ sum(abs2, e; dims)
+    l = log.(abs.(expm1.(d)))
+    S = logsumexp(2 .* l; dims)
+    return sign.(d) .* 2 .* exp.(d .+ l .- S)
 end
 
 function _∂x_pullback(∂x, x)
     project_x = ChainRulesCore.ProjectTo(x)
     function pullback(Ω̄)
+        ΔΩ = ChainRulesCore.unthunk(Ω̄)
         x̄ = ChainRulesCore.InplaceableThunk(
-            Δ -> Δ .+= Ω̄ .* ∂x,
-            ChainRulesCore.@thunk(project_x(Ω̄ .* ∂x)),
+            Δ -> Δ .+= ΔΩ .* ∂x,
+            ChainRulesCore.@thunk(project_x(ΔΩ .* ∂x)),
         )
         return ChainRulesCore.NoTangent(), x̄
     end

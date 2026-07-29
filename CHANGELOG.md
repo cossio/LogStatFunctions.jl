@@ -5,8 +5,8 @@ All notable changes to this project will be documented in this file. The format 
 ## Unreleased
 
 - Add a ChainRulesCore extension defining `frule`s and `rrule`s for
-  `logmeanexp`, `logvarexp` and `logstdexp`, making them differentiable with
-  ChainRules-based AD packages (e.g. Zygote).
+  `logmeanexp`, `logvarexp` and `logstdexp` on real arrays, making them
+  differentiable with ChainRules-based AD packages (e.g. Zygote).
 - Support immutable arrays (e.g. `StaticArrays`) and complex arrays.
 - Results preserve the input eltype (e.g. `Float32` in → `Float32` out), and
   the `log(N)` normalization is computed in the result's precision (so e.g.
