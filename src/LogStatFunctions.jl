@@ -1,47 +1,67 @@
 module LogStatFunctions
 
-export logmeanexp, logvarexp, logstdexp
-
 using LogExpFunctions: logsumexp, logsubexp
 
+export logmeanexp, logvarexp, logstdexp
+
 """
-    logmeanexp(A::AbstractArray; dims=:)
+    logmeanexp(A; dims=:)
 
 Computes `log.(mean(exp.(A); dims))`, in a numerically stable way.
 """
-function logmeanexp(A::AbstractArray; dims=:)
+function logmeanexp(A::AbstractArray; dims = :)
     R = logsumexp(A; dims)
-    N = convert(eltype(R), length(A) ÷ length(R))
-    return R .- log(N)
+    N = length(A) ÷ length(R)
+    return sub!(R, loglen(R, N))
 end
 
 """
-    logvarexp(A::AbstractArray; dims=:)
+    logvarexp(A; dims=:, corrected=true, logmean=logmeanexp(A; dims))
 
 Computes `log.(var(exp.(A); dims))`, in a numerically stable way.
 """
 function logvarexp(
-    A::AbstractArray; dims=:, corrected::Bool=true, logmean=logmeanexp(A; dims)
-)
+        A::AbstractArray; dims = :, corrected::Bool = true, logmean = logmeanexp(A; dims)
+    )
     R = logsumexp(2logsubexp.(A, logmean); dims)
-    N = convert(eltype(R), length(A) ÷ length(R))
-	if corrected
-		return R .- log(N - 1)
+    N = length(A) ÷ length(R)
+    if corrected
+        return sub!(R, loglen(R, N - 1))
     else
-        return R .- log(N)
+        return sub!(R, loglen(R, N))
     end
 end
 
 """
-    logstdexp(A::AbstractArray; dims=:)
+    logstdexp(A; dims=:, corrected=true, logmean=logmeanexp(A; dims))
 
 Computes `log.(std(exp.(A); dims))`, in a numerically stable way.
 """
 function logstdexp(
-    A::AbstractArray; dims=:, corrected::Bool=true, logmean=logmeanexp(A; dims)
-)
-    return logvarexp(A; dims, corrected, logmean) / 2
+        A::AbstractArray; dims = :, corrected::Bool = true, logmean = logmeanexp(A; dims)
+    )
+    return halve!(logvarexp(A; dims, corrected, logmean))
 end
 
+loglen(R::AbstractArray, N::Integer) = log(convert(real(eltype(R)), N))
+loglen(R::Number, N::Integer) = log(convert(real(typeof(R)), N))
 
+function sub!(R::AbstractArray, c::Real)
+    if ismutabletype(typeof(R))
+        return R .-= c
+    else
+        return R .- convert(real(eltype(R)), c)
+    end
 end
+sub!(R::Number, c::Real) = R - convert(real(typeof(R)), c)
+
+function halve!(R::AbstractArray)
+    if ismutabletype(typeof(R))
+        return R ./= 2
+    else
+        return R ./ 2
+    end
+end
+halve!(R::Number) = R / 2
+
+end # module
