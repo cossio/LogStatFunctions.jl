@@ -1,6 +1,7 @@
 module LogStatFunctionsChainRulesCoreExt
 
 using LogStatFunctions: logmeanexp, logvarexp, logstdexp
+using LogExpFunctions: logsumexp, logsubexp
 import ChainRulesCore
 
 function ChainRulesCore.frule((_, Δx), ::typeof(logmeanexp), x::AbstractArray{<:Real}; dims = :)
@@ -52,19 +53,22 @@ end
 
 # ∂/∂xⱼ log(var(exp.(x))) = 2 exp(xⱼ) (exp(xⱼ) - m) / Σᵢ (exp(xᵢ) - m)², with m = exp(logmean).
 # The m-dependence on x drops out because Σᵢ (exp(xᵢ) - m) = 0, and `corrected` only shifts
-# the result by a constant, so the gradient is the same either way.
+# the result by a constant, so the gradient is the same either way. Computed in the log
+# domain: squaring exp(xᵢ) - m directly can under/overflow even when the gradient itself is
+# representable (e.g. nearly equal entries around zero).
 function _∂x_logvarexp(x::AbstractArray{<:Real}, logmean, dims)
-    d = x .- logmean
-    e = expm1.(d)
-    return (2 .* exp.(d) .* e) ./ sum(abs2, e; dims)
+    l = logsubexp.(x, logmean)
+    S = logsumexp(2 .* l; dims)
+    return sign.(x .- logmean) .* 2 .* exp.(x .+ l .- S)
 end
 
 function _∂x_pullback(∂x, x)
     project_x = ChainRulesCore.ProjectTo(x)
     function pullback(Ω̄)
+        ΔΩ = ChainRulesCore.unthunk(Ω̄)
         x̄ = ChainRulesCore.InplaceableThunk(
-            Δ -> Δ .+= Ω̄ .* ∂x,
-            ChainRulesCore.@thunk(project_x(Ω̄ .* ∂x)),
+            Δ -> Δ .+= ΔΩ .* ∂x,
+            ChainRulesCore.@thunk(project_x(ΔΩ .* ∂x)),
         )
         return ChainRulesCore.NoTangent(), x̄
     end
