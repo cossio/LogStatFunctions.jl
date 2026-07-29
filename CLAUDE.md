@@ -12,6 +12,8 @@ The entire implementation lives in `src/LogStatFunctions.jl` (a single module, ~
 
 The root `Project.toml` declares a Pkg workspace (`[workspace] projects = ["test", "docs"]`), so `test/` and `docs/` are workspace members sharing the root `Manifest.toml` (gitignored). Do not create `test/Manifest.toml` or `docs/Manifest.toml`. Sub-projects list `LogStatFunctions` in their `[deps]` and it resolves to the local package via the workspace — no `Pkg.develop` needed.
 
+Workspaces need Julia 1.12+. On 1.10/1.11 the `[workspace]` table is ignored, so `--project=test` and `--project=docs` have no manifest of their own and cannot see the local package — activating them directly fails. `Pkg.test()` from the root still works on those versions, because it resolves the test target fresh.
+
 `test/runtests.jl` only includes the other test files, each wrapped in a bare module (`functions.jl` for the functional tests, `aqua.jl` for Aqua.jl quality checks, `explicit_imports.jl` for ExplicitImports.jl checks). Add new test files following that pattern.
 
 ## Commands
@@ -22,13 +24,13 @@ Run the full test suite from the repo root:
 julia --project -e 'using Pkg; Pkg.test()'
 ```
 
-Run a single test file directly (faster on repeat runs; uses the shared workspace manifest):
+Run a single test file directly (faster on repeat runs; uses the shared workspace manifest, so this one needs Julia 1.12+):
 
 ```sh
 julia --project=test test/functions.jl
 ```
 
-Build the docs (output in `docs/build/`, gitignored):
+Build the docs (output in `docs/build/`, gitignored; also Julia 1.12+):
 
 ```sh
 julia --project=docs -e 'using Pkg; Pkg.instantiate()'   # first time

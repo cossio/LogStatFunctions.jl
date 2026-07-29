@@ -44,6 +44,20 @@ end
     end
 end
 
+@testset "arbitrary precision" begin
+    # the log(N) normalization must be evaluated in the result precision: taking
+    # log of the Int first would normalize by a Float64 approximation
+    @test logmeanexp(fill(big"0.0", 3)) == 0
+    @test logmeanexp(fill(big"0.0", 3, 2); dims = 1) == zeros(BigFloat, 1, 2)
+    A = big"0.0" .+ [0.0, 1.0, 2.0, 3.0]
+    @test logmeanexp(A) isa BigFloat
+    @test logmeanexp(A) ≈ log(mean(exp.(A)))
+    for corrected in (true, false)
+        @test logvarexp(A; corrected) ≈ log(var(exp.(A); corrected))
+        @test logstdexp(A; corrected) ≈ log(std(exp.(A); corrected))
+    end
+end
+
 @testset "complex arrays" begin
     A = randn(ComplexF64, 5)
     @test logmeanexp(A) ≈ log(mean(exp.(A)))
