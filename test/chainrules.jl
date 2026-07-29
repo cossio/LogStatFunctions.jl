@@ -32,3 +32,18 @@ end
         @test ΔΩ ≈ -1.0e200 / h
     end
 end
+
+@testset "chainrules large common offset" begin
+    # The gradients are translation-invariant. The spread is a multiple of ulp(c) for every
+    # offset c below, so x .+ c is exact and the gradients must agree to machine precision.
+    x = collect((1:10) .* 0.125)
+    for f in (logmeanexp, logvarexp, logstdexp)
+        g = unthunk(rrule(f, x)[2](1.0)[2])
+        Δx = [1.0; zeros(9)]
+        ΔΩ = frule((NoTangent(), Δx), f, x)[2]
+        for c in (1.0e12, 1.0e15)
+            @test unthunk(rrule(f, x .+ c)[2](1.0)[2]) ≈ g rtol = 1.0e-10
+            @test frule((NoTangent(), Δx), f, x .+ c)[2] ≈ ΔΩ rtol = 1.0e-10
+        end
+    end
+end

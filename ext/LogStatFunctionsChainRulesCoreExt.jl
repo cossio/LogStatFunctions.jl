@@ -1,20 +1,18 @@
 module LogStatFunctionsChainRulesCoreExt
 
 using LogStatFunctions: logmeanexp, logvarexp, logstdexp
-using LogExpFunctions: logsumexp, logsubexp
+using LogExpFunctions: logsumexp
 import ChainRulesCore
 
 function ChainRulesCore.frule((_, Δx), ::typeof(logmeanexp), x::AbstractArray{<:Real}; dims = :)
     Ω = logmeanexp(x; dims)
-    n = length(x) ÷ length(Ω)
-    ΔΩ = sum(exp.(x .- Ω) .* Δx; dims) ./ n
+    ΔΩ = sum(_softmax(x, dims) .* Δx; dims)
     return Ω, ΔΩ
 end
 
 function ChainRulesCore.rrule(::typeof(logmeanexp), x::AbstractArray{<:Real}; dims = :)
     Ω = logmeanexp(x; dims)
-    n = length(x) ÷ length(Ω)
-    return Ω, _∂x_pullback(exp.(x .- Ω) ./ n, x)
+    return Ω, _∂x_pullback(_softmax(x, dims), x)
 end
 
 function ChainRulesCore.frule(
@@ -22,7 +20,7 @@ function ChainRulesCore.frule(
         dims = :, corrected::Bool = true, logmean = logmeanexp(x; dims)
     )
     Ω = logvarexp(x; dims, corrected, logmean)
-    ΔΩ = sum(_∂x_logvarexp(x, logmean, dims) .* Δx; dims)
+    ΔΩ = sum(_∂x_logvarexp(x, dims) .* Δx; dims)
     return Ω, ΔΩ
 end
 
@@ -31,7 +29,7 @@ function ChainRulesCore.rrule(
         dims = :, corrected::Bool = true, logmean = logmeanexp(x; dims)
     )
     Ω = logvarexp(x; dims, corrected, logmean)
-    return Ω, _∂x_pullback(_∂x_logvarexp(x, logmean, dims), x)
+    return Ω, _∂x_pullback(_∂x_logvarexp(x, dims), x)
 end
 
 function ChainRulesCore.frule(
@@ -39,7 +37,7 @@ function ChainRulesCore.frule(
         dims = :, corrected::Bool = true, logmean = logmeanexp(x; dims)
     )
     Ω = logstdexp(x; dims, corrected, logmean)
-    ΔΩ = sum(_∂x_logvarexp(x, logmean, dims) ./ 2 .* Δx; dims)
+    ΔΩ = sum(_∂x_logvarexp(x, dims) ./ 2 .* Δx; dims)
     return Ω, ΔΩ
 end
 
@@ -48,18 +46,35 @@ function ChainRulesCore.rrule(
         dims = :, corrected::Bool = true, logmean = logmeanexp(x; dims)
     )
     Ω = logstdexp(x; dims, corrected, logmean)
-    return Ω, _∂x_pullback(_∂x_logvarexp(x, logmean, dims) / 2, x)
+    return Ω, _∂x_pullback(_∂x_logvarexp(x, dims) / 2, x)
+end
+
+# ∂/∂xⱼ log(mean(exp.(x))) = exp(xⱼ) / Σᵢ exp(xᵢ), i.e. softmax(x). Normalizing by the
+# actual sum of the max-centered exponentials (rather than dividing exp(x - logmean) by n)
+# makes a large common offset in x cancel exactly instead of leaking ulp-level errors of
+# the offset's magnitude into the gradient.
+function _softmax(x::AbstractArray{<:Real}, dims)
+    y = exp.(x .- maximum(x; dims))
+    return y ./ sum(y; dims)
 end
 
 # ∂/∂xⱼ log(var(exp.(x))) = 2 exp(xⱼ) (exp(xⱼ) - m) / Σᵢ (exp(xᵢ) - m)², with m = exp(logmean).
 # The m-dependence on x drops out because Σᵢ (exp(xᵢ) - m) = 0, and `corrected` only shifts
-# the result by a constant, so the gradient is the same either way. Computed in the log
-# domain: squaring exp(xᵢ) - m directly can under/overflow even when the gradient itself is
-# representable (e.g. nearly equal entries around zero).
-function _∂x_logvarexp(x::AbstractArray{<:Real}, logmean, dims)
-    l = logsubexp.(x, logmean)
+# the result by a constant, so the gradient is the same either way. The gradient is
+# translation-invariant, so everything is computed from max-centered values (a large common
+# offset cancels exactly in t and never enters the arithmetic), and in the log domain
+# (squaring expm1(d) directly can underflow even when the gradient itself is representable,
+# e.g. for nearly equal entries). lm is formed before subtracting from t so that log(n)
+# cancels against logsumexp's log(n) content instead of absorbing tiny d values.
+function _∂x_logvarexp(x::AbstractArray{<:Real}, dims)
+    t = x .- maximum(x; dims)
+    lse = logsumexp(t; dims)
+    n = length(x) ÷ length(lse)
+    lm = lse .- log(convert(eltype(lse), n))
+    d = t .- lm
+    l = log.(abs.(expm1.(d)))
     S = logsumexp(2 .* l; dims)
-    return sign.(x .- logmean) .* 2 .* exp.(x .+ l .- S)
+    return sign.(d) .* 2 .* exp.(d .+ l .- S)
 end
 
 function _∂x_pullback(∂x, x)
