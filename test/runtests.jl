@@ -4,6 +4,9 @@ end
 module chainrules_tests
     include("chainrules.jl")
 end
+module jlarrays_tests
+    include("jlarrays.jl")
+end
 module explicit_imports_tests
     include("explicit_imports.jl")
 end
