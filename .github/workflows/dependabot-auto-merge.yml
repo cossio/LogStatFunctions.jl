@@ -1,8 +1,13 @@
 name: Dependabot auto-merge
 
-# Auto-merges Dependabot PRs that only bump GitHub Actions (patch/minor).
-# Julia package updates and any semver-major bump are left for manual review:
-# widening a Julia [compat] to admit a new major is the change most likely to break tests.
+# Auto-merges Dependabot PRs that bump GitHub Actions, which arrive as a single
+# grouped PR per month. All update types are included, semver-major among them:
+# every PR is gated by a required CI check, so a breaking bump fails CI and is
+# never merged. Filtering majors out would instead let one major bump hold the
+# entire month's group.
+#
+# Julia package updates are always left for manual review: widening a [compat]
+# to admit a new major is the change most likely to break tests.
 on: pull_request
 
 permissions:
@@ -13,6 +18,7 @@ jobs:
   auto-merge:
     name: Auto-merge Dependabot GitHub Actions updates
     runs-on: ubuntu-latest
+    # Skips entirely for any PR not opened by Dependabot; those stay manual.
     if: github.event.pull_request.user.login == 'dependabot[bot]'
     steps:
       # Note: deliberately does not check out the PR's code.
@@ -22,10 +28,8 @@ jobs:
 
       - name: Enable auto-merge
         if: >-
-          (steps.meta.outputs.package-ecosystem == 'github-actions' ||
-           steps.meta.outputs.package-ecosystem == 'github_actions') &&
-          (steps.meta.outputs.update-type == 'version-update:semver-patch' ||
-           steps.meta.outputs.update-type == 'version-update:semver-minor')
+          steps.meta.outputs.package-ecosystem == 'github-actions' ||
+          steps.meta.outputs.package-ecosystem == 'github_actions'
         run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
