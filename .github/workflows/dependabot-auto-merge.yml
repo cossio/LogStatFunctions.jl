@@ -1,0 +1,32 @@
+name: Dependabot auto-merge
+
+# Auto-merges Dependabot PRs that only bump GitHub Actions (patch/minor).
+# Julia package updates and any semver-major bump are left for manual review:
+# widening a Julia [compat] to admit a new major is the change most likely to break tests.
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Auto-merge Dependabot GitHub Actions updates
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    steps:
+      # Note: deliberately does not check out the PR's code.
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      - name: Enable auto-merge
+        if: >-
+          (steps.meta.outputs.package-ecosystem == 'github-actions' ||
+           steps.meta.outputs.package-ecosystem == 'github_actions') &&
+          (steps.meta.outputs.update-type == 'version-update:semver-patch' ||
+           steps.meta.outputs.update-type == 'version-update:semver-minor')
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
